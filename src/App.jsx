@@ -4,6 +4,7 @@ import Hero from './components/Hero';
 import MenuHighlights from './components/MenuHighlights';
 import About from './components/About';
 import Footer from './components/Footer';
+import ChatBox from './components/ChatBox';
 
 function App() {
   return (
@@ -15,6 +16,7 @@ function App() {
         <About />
       </main>
       <Footer />
+      <ChatBox />
     </div>
   );
 }
