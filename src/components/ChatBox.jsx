@@ -1,5 +1,4 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { HfInference } from "@huggingface/inference";
 
 const SYSTEM_PROMPT = `
 You are a helpful and friendly AI assistant for "Slow Sips", a premium artisanal cafe.
@@ -37,51 +36,32 @@ const ChatBox = () => {
     }, [messages, isOpen]);
 
     const handleSend = async () => {
-        if (!input.trim()) return;
+        const prompt = input.trim();
+        if (!prompt || isLoading) return;
 
-        const userMessage = { role: 'user', content: input };
+        const userMessage = { role: 'user', content: prompt };
         setMessages(prev => [...prev, userMessage]);
         setInput('');
         setIsLoading(true);
 
         try {
-            const token = import.meta.env.VITE_HF_TOKEN;
-
-            if (!token) {
-                throw new Error("Missing API Token");
-            }
-
-            // Build conversation for chat completion
             const conversation = [
                 { role: "system", content: SYSTEM_PROMPT },
                 ...messages.map(m => ({ role: m.role, content: m.content })),
-                { role: "user", content: input }
+                userMessage,
             ];
 
-            // Using HuggingFace Router with Llama 3.2
-            const response = await fetch(
-                "https://router.huggingface.co/v1/chat/completions",
-                {
-                    headers: {
-                        Authorization: `Bearer ${token}`,
-                        "Content-Type": "application/json",
-                    },
-                    method: "POST",
-                    body: JSON.stringify({
-                        model: "meta-llama/Llama-3.2-1B-Instruct",
-                        messages: conversation,
-                        max_tokens: 150,
-                        temperature: 0.7,
-                    }),
-                }
-            );
+            const response = await fetch('/api/chat', {
+                headers: { 'Content-Type': 'application/json' },
+                method: 'POST',
+                body: JSON.stringify({ messages: conversation }),
+            });
 
+            const result = await response.json().catch(() => ({}));
             if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.error?.message || `HTTP ${response.status}`);
+                const detail = result.error?.message || result.error;
+                throw new Error(typeof detail === 'string' ? detail : `Hugging Face returned HTTP ${response.status}.`);
             }
-
-            const result = await response.json();
 
             const aiMessage = {
                 role: 'assistant',
@@ -94,10 +74,7 @@ const ChatBox = () => {
 
             let errorMessage = "I'm having a little trouble connecting right now. Please try again later.";
 
-            if (error.message === "Missing API Token") {
-                errorMessage = "Setup Error: VITE_HF_TOKEN is missing in the .env file.";
-            } else if (error.message) {
-                // Show specific error for debugging
+            if (error.message) {
                 errorMessage = `Connection Error: ${error.message}`;
             }
 
@@ -107,12 +84,6 @@ const ChatBox = () => {
             }]);
         } finally {
             setIsLoading(false);
-        }
-    };
-
-    const handleKeyPress = (e) => {
-        if (e.key === 'Enter') {
-            handleSend();
         }
     };
 
@@ -165,17 +136,22 @@ const ChatBox = () => {
                 </div>
 
                 {/* Input */}
-                <div className="p-3 bg-white border-t border-brown-100 flex items-center space-x-2">
+                <form
+                    className="p-3 bg-white border-t border-brown-100 flex items-center space-x-2"
+                    onSubmit={(event) => {
+                        event.preventDefault();
+                        handleSend();
+                    }}
+                >
                     <input
                         type="text"
                         value={input}
                         onChange={(e) => setInput(e.target.value)}
-                        onKeyPress={handleKeyPress}
                         placeholder="Ask about our coffee..."
                         className="flex-1 bg-brown-50 border border-brown-200 rounded-full px-4 py-2 text-sm text-brown-900 focus:outline-none focus:ring-2 focus:ring-brown-400 focus:border-transparent"
                     />
                     <button
-                        onClick={handleSend}
+                        type="submit"
                         disabled={isLoading || !input.trim()}
                         className="bg-brown-800 text-white p-2 rounded-full hover:bg-brown-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                     >
@@ -183,7 +159,7 @@ const ChatBox = () => {
                             <path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" />
                         </svg>
                     </button>
-                </div>
+                </form>
             </div>
 
             {/* FAB */}
