@@ -11,7 +11,7 @@ A React and Vite website for Slow Sips Cafe, with a Hugging Face powered chat as
 
 The assistant uses `meta-llama/Llama-3.1-8B-Instruct:fastest` by default. You can set `HF_MODEL` in `.env.local` to another chat model available through one of your enabled Hugging Face Inference Providers. Restart Vite after changing environment variables.
 
-The Hugging Face token is read by Vite's local development server and is never sent to the browser. The `/api/chat` endpoint in `vite.config.js` is for local development. A production deployment needs a server-side API route that makes the same Hugging Face request; do not put the token in client-side build variables.
+The Hugging Face token is read on the server and is never sent to the browser. Local development uses the `/api/chat` middleware in `vite.config.js`; Vercel uses the serverless function in `api/chat.js`. For Vercel, add `HF_TOKEN` under **Project Settings → Environment Variables** for the Production environment (and Preview if you use preview deployments), then redeploy. Add `HF_MODEL` only if you want to override the default model. Do not use a `VITE_` prefix for either secret/configuration variable.
 
 ## Troubleshooting
 
